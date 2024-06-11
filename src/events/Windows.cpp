@@ -143,22 +143,24 @@ void Events::listener_mapWindow(void* owner, void* data) {
         if (r.szRule.starts_with("monitor")) {
             try {
                 const auto MONITORSTR = trim(r.szRule.substr(r.szRule.find(' ')));
+                const auto        requestedMonitor = MONITORSTR.contains(' ') ? MONITORSTR.substr(0, MONITORSTR.find_first_of(' ')) : MONITORSTR;
+                const CVarList    MONITORARGS      = CVarList(MONITORSTR, 0, ' ');
 
-                if (MONITORSTR == "unset") {
+                if (requestedMonitor == "unset") {
                     PWINDOW->m_iMonitorID = PMONITOR->ID;
                 } else {
-                    if (isNumber(MONITORSTR)) {
-                        const long int MONITOR = std::stoi(MONITORSTR);
+                    if (isNumber(requestedMonitor)) {
+                        const long int MONITOR = std::stoi(requestedMonitor);
                         if (!g_pCompositor->getMonitorFromID(MONITOR))
                             PWINDOW->m_iMonitorID = 0;
                         else
                             PWINDOW->m_iMonitorID = MONITOR;
                     } else {
-                        const auto PMONITOR = g_pCompositor->getMonitorFromName(MONITORSTR);
+                        const auto PMONITOR = g_pCompositor->getMonitorFromName(requestedMonitor);
                         if (PMONITOR)
                             PWINDOW->m_iMonitorID = PMONITOR->ID;
                         else {
-                            Debug::log(ERR, "No monitor in monitor {} rule", MONITORSTR);
+                            Debug::log(ERR, "No monitor in monitor {} rule", requestedMonitor);
                             continue;
                         }
                     }
@@ -167,7 +169,11 @@ void Events::listener_mapWindow(void* owner, void* data) {
                 const auto PMONITORFROMID = g_pCompositor->getMonitorFromID(PWINDOW->m_iMonitorID);
 
                 if (PWINDOW->m_iMonitorID != PMONITOR->ID) {
-                    g_pKeybindManager->m_mDispatchers["focusmonitor"](std::to_string(PWINDOW->m_iMonitorID));
+                    if (MONITORARGS[MONITORARGS.size() - 1] == "silent")
+                        workspaceSilent = true;
+                    else
+                        g_pKeybindManager->m_mDispatchers["focusmonitor"](std::to_string(PWINDOW->m_iMonitorID));
+
                     PMONITOR = PMONITORFROMID;
                 }
                 PWINDOW->m_pWorkspace = PMONITOR->activeSpecialWorkspace ? PMONITOR->activeSpecialWorkspace : PMONITOR->activeWorkspace;
